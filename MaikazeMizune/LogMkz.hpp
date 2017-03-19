@@ -7,8 +7,10 @@ MaikazeMizune Logger System[C++]
 2017/03/17 set some api
 TO-DO: Add Linux Support
 */
+#pragma once
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <vector>
 
 /*for getting the path of temp folder*/
@@ -17,8 +19,8 @@ TO-DO: Add Linux Support
 TCHAR PATH[255];
 #endif
 
-#define _F __FILE__
-#define _L __LINE__
+#define FILEMACRO __FILE__
+#define LINEMACRO __LINE__
 
 #define LOG_REC 0x0000
 #define LOG_SUC 0x0001
@@ -26,9 +28,10 @@ TCHAR PATH[255];
 /*the parameter or valurables is invalid*/
 #define LOG_NOT 0x00FE
 
-#define str(x) std::to_string(x)
-#define vname(x) #x
-#define stdstr std::string
+#define ToString(x) std::to_string(x)
+#define vname_(x) #x
+#define vname(x) vname_(x)
+using stdstr = std::string;
 
 /*LOG_LEVEL Definition
     SUCCESS: бнбн
@@ -46,16 +49,19 @@ enum LOG_LEVEL
 };
 
 /*Convertor function(to transform LEVEL from enum to String*/
+
+#define LevelToStringCase(level) case level: return vname(level)
+
 inline stdstr LEVEL2STR(LOG_LEVEL p_level)
 {
     switch (p_level)
     {
-    case RECORD:         return "RECORD";
-    case SUCCESS:        return "SUCCESS";
-    case WARNING:        return "WARNING";
+		LevelToStringCase(RECORD);
+		LevelToStringCase(SUCCESS);
+		LevelToStringCase(WARNING);
+		LevelToStringCase(BROKEN);
     case LOGERR:          return "ERROR";
-    case BROKEN:         return "BROKEN";
-    default:        return "SUCCESS";        break;
+    default:        return "SUCCESS";
     }
 }
 
@@ -138,7 +144,7 @@ private:
     void DealLevel(LOG_LEVEL p_level);
 };
 
-Log::Log()
+inline Log::Log()
 {
     //default, but bot reconmemded.
     freq_ = 56;
@@ -149,7 +155,7 @@ Log::Log()
     log(SUCCESS, LOG_SUC, log_inf);
 }
 
-Log::Log(bool p_autosave, stdstr p_path)
+inline Log::Log(bool p_autosave, stdstr p_path)
 {
     freq_ = 56;
     display_ = true;
@@ -158,7 +164,7 @@ Log::Log(bool p_autosave, stdstr p_path)
     log(SUCCESS, LOG_SUC, log_inf);
 }
 
-void Log::Init(bool p_autosave, stdstr p_path)
+inline void Log::Init(bool p_autosave, stdstr p_path)
 {
     autosave_ = p_autosave;
     path_ = p_path;
@@ -168,42 +174,41 @@ void Log::Init(bool p_autosave, stdstr p_path)
     if (fp_ == nullptr)
     {
         log_inf = "Try to save in temp path because cannot open the log_file to save: " + path_;
-        log(WARNING, LOG_ERR, log_inf, _F, _L);
+        log(WARNING, LOG_ERR, log_inf, FILEMACRO, LINEMACRO);
 
 #ifdef WIN32
         //get the path of temp folder
-        GetTempPath(255, PATH);
-        std::wstring TEMP_PATH = std::wstring(PATH) + std::wstring(L"maikaze.log");        
+        GetTempPath(std::size(PATH), PATH);
+		std::wstring TEMP_PATH = PATH;
+    	TEMP_PATH += L"maikaze.log";
         char tmp[255] = { 0 };
         size_t tmpint = 0;
         //because the win api return the wchar_t[], so we use the convertion.
         wcstombs_s(&tmpint, tmp, TEMP_PATH.c_str(), wcslen(TEMP_PATH.c_str()));
-        path_ = stdstr(tmp);
+        path_ = tmp;
 #endif
         fopen_s(&fp_, path_.c_str(), "a+");
-
+		
         if (fp_ == nullptr)
         {
             log_inf = "All the log will not be save on harddisk because failed to save in temp path: " + path_;
-            log(LOGERR, LOG_ERR, log_inf, _F, _L);
+            log(LOGERR, LOG_ERR, log_inf, FILEMACRO, LINEMACRO);
             autosave_ = false;
             return;
         }
-        else
-        {
-            log_inf = "Succeed to save in temp path : " + path_;
-            autosave_ = true;
-            log(SUCCESS, LOG_SUC, log_inf, _F, _L);
-        }
+
+	    log_inf = "Succeed to save in temp path : " + path_;
+	    autosave_ = true;
+	    log(SUCCESS, LOG_SUC, log_inf, FILEMACRO, LINEMACRO);
     }
     else
     {
         log_inf = "Succeed to open the log file: " + path_;
-        log(SUCCESS, LOG_SUC, log_inf, _F, _L);
+        log(SUCCESS, LOG_SUC, log_inf, FILEMACRO, LINEMACRO);
     }
 }
 
-Log::~Log()
+inline Log::~Log()
 {
     log_inf = "start unconstruction of logger system";
     log(RECORD, LOG_REC, log_inf);
@@ -213,19 +218,21 @@ Log::~Log()
         fclose(fp_);
 }
 
-void Log::log(LOG_LEVEL p_level, int p_code, stdstr p_detail)
+inline void Log::log(LOG_LEVEL p_level, int p_code, stdstr p_detail)
 {
     log(p_level, p_code, p_detail, "Miss File. ", -1, autosave_);
 }
 
-void Log::log(LOG_LEVEL p_level, int p_code, stdstr p_detail, const char * p_file, int p_line)
+inline void Log::log(LOG_LEVEL p_level, int p_code, stdstr p_detail, const char * p_file, int p_line)
 {
     log(p_level, p_code, p_detail, p_file, p_line, autosave_);
 }
 
-void Log::log(LOG_LEVEL p_level, int p_code, stdstr p_detail, const char * p_file, int p_line, bool p_save)
+inline void Log::log(LOG_LEVEL p_level, int p_code, stdstr p_detail, const char * p_file, int p_line, bool p_save)
 {
-    log_inf = stdstr(p_file) + "    line:  " + str(p_line) + "\n  ->Level: " + LEVEL2STR(p_level) + stdstr("   code: ") + str(p_code) + "   detail: " + p_detail + "\n";
+	std::stringstream ss;
+	ss << p_file << "    line:  " << p_line << "\n  ->Level: " << LEVEL2STR(p_level) << "   code: " << p_code << "   detail: " << p_detail << std::endl;
+    log_inf = ss.str();
     history_.push_back(log_inf);
 
     if (display_)
@@ -235,7 +242,7 @@ void Log::log(LOG_LEVEL p_level, int p_code, stdstr p_detail, const char * p_fil
     DealLevel(p_level);
 }
 
-void Log::DealLevel(LOG_LEVEL p_level)
+inline void Log::DealLevel(LOG_LEVEL p_level)
 {
     switch (p_level)
     {
@@ -243,18 +250,18 @@ void Log::DealLevel(LOG_LEVEL p_level)
         std::cout << "Error occurred, please input any thing to continue." << std::endl;
         std::cin >> log_inf; break;
     case BROKEN: 
-        SaveRefresh(); exit(-1); break;
+        SaveRefresh(); exit(EXIT_FAILURE);
     default: break;
     }
 }
 
-void Log::Save(stdstr p_inf)
+inline void Log::Save(stdstr p_inf)
 {
     if (fp_ == nullptr)
     {
         log_inf = "Saving module is not opened or failed to open the save log. Please do not Save.";
         autosave_ = false;
-        log(WARNING, LOG_ERR, log_inf, _F, _L);
+        log(WARNING, LOG_ERR, log_inf, FILEMACRO, LINEMACRO);
         return;
     }
 
@@ -263,14 +270,14 @@ void Log::Save(stdstr p_inf)
         SaveRefresh();
 }
 
-void Log::SaveRefresh()
+inline void Log::SaveRefresh()
 {
     int ret = EOF;
     if (fp_ == nullptr)
     {
         log_inf = "Saving module is not opened or failed to open the save log. Please do not Save.";
         autosave_ = false;
-        log(WARNING, LOG_ERR, log_inf, _F, _L);
+        log(WARNING, LOG_ERR, log_inf, FILEMACRO, LINEMACRO);
     }
     else
     {
@@ -307,7 +314,7 @@ void Log::SaveRefresh()
     log(RECORD, LOG_REC, log_inf);
 }
 
-void Log::SetSaveFreq(int p_freq)
+inline void Log::SetSaveFreq(int p_freq)
 {
     if (p_freq > 0 && p_freq < USHRT_MAX)
         freq_ = p_freq;
@@ -315,42 +322,44 @@ void Log::SetSaveFreq(int p_freq)
         log(LOGERR, LOG_NOT, "Invalid save frequence number.");
 }
 
-void Log::SetDisplay(bool p_display)
+inline void Log::SetDisplay(bool p_display)
 {
     display_ = p_display;
 }
 
-void Log::Rec(stdstr p_detail)
+inline void Log::Rec(stdstr p_detail)
 {
     log(RECORD, LOG_REC, p_detail);
 }
 
-void Log::Rec(stdstr p_detail, const char* p_file, int p_line)
+inline void Log::Rec(stdstr p_detail, const char* p_file, int p_line)
 {
     log(RECORD, LOG_REC, p_detail, p_file, p_line);
 }
 
-void Log::Recv(stdstr p_name, stdstr p_value)
+inline void Log::Recv(stdstr p_name, stdstr p_value)
 {
     log(RECORD, LOG_REC, p_name + " = " + p_value);
 }
 
-void Log::Recv(stdstr p_name, stdstr p_value, const char* p_file, int p_line)
+inline void Log::Recv(stdstr p_name, stdstr p_value, const char* p_file, int p_line)
 {
     log(RECORD, LOG_REC, p_name + " = " + p_value, p_file, p_line);
 }
 
-void Log::Warn(int p_code, stdstr p_deteail, const char* p_file, int p_line)
+inline void Log::Warn(int p_code, stdstr p_deteail, const char* p_file, int p_line)
 {
     log(WARNING, p_code, p_deteail, p_file, p_line);
 }
 
-void Log::Err(int p_code, stdstr p_deteail, const char* p_file, int p_line)
+inline void Log::Err(int p_code, stdstr p_deteail, const char* p_file, int p_line)
 {
     log(LOGERR, p_code, p_deteail, p_file, p_line);
 }
 
-void Log::Boom(int p_code, stdstr p_deteail, const char* p_file, int p_line)
+inline void Log::Boom(int p_code, stdstr p_deteail, const char* p_file, int p_line)
 {
     log(BROKEN, p_code, p_deteail, p_file, p_line);
 }
+
+#define LogWithContext(level, code, detail) log(level, code, detail, FILEMACRO, LINEMACRO)
