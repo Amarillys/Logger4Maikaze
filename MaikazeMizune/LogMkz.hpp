@@ -12,6 +12,7 @@ TO-DO: Add Linux Support
 #include <string>
 #include <sstream>
 #include <vector>
+#include <chrono>
 
 /*for getting the path of temp folder*/
 #ifdef WIN32
@@ -144,6 +145,8 @@ private:
     void DealLevel(LOG_LEVEL p_level);
 };
 
+Log * LOG;
+
 inline Log::Log()
 {
     //default, but bot reconmemded.
@@ -231,7 +234,10 @@ inline void Log::log(LOG_LEVEL p_level, int p_code, stdstr p_detail, const char 
 inline void Log::log(LOG_LEVEL p_level, int p_code, stdstr p_detail, const char * p_file, int p_line, bool p_save)
 {
 	std::stringstream ss;
-	ss << p_file << "    line:  " << p_line << "\n  ->Level: " << LEVEL2STR(p_level) << "   code: " << p_code << "   detail: " << p_detail << std::endl;
+    if (p_line > 0)
+        ss << p_file << "    line:  " << p_line << "\n  >Level: " << LEVEL2STR(p_level) << " C: " << p_code << "   detail: " << p_detail << std::endl;
+    else
+        ss << ">" << LEVEL2STR(p_level) << "  C: " << p_code << "  detail: " << p_detail << std::endl;
     log_inf = ss.str();
     history_.push_back(log_inf);
 
